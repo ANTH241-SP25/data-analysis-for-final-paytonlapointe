@@ -1,0 +1,295 @@
+Data Analysis Final Project
+
+Descriptive Statistics
+Continuous variables
+```{r}
+NHANES2017_18a <- read.csv("C:/Users/paypa/Documents/clean_data")
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+NHANES2017_18a%>%
+  drop_na(Moderate)%>%
+  filter(Moderate<541)%>%
+  summarize(mean(Moderate), sd(Moderate), count=n())
+NHANES2017_18a%>%
+  drop_na(DR1TTFAT)%>%
+  summarize(mean(DR1TTFAT), sd(DR1TTFAT), count=n())
+NHANES2017_18a%>%
+  drop_na(LDLCholesterol)%>%
+  summarize(mean(LDLCholesterol), sd(LDLCholesterol), count=n())
+```
+Descriptive Statistics for ordinal and nominal variables
+```{r}
+library(questionr)
+freq(NHANES2017_18a$BMIcat, cum=TRUE)
+freq(NHANES2017_18a$Agecat, cum=TRUE)
+freq(NHANES2017_18a$Gender, cum=TRUE)
+freq(NHANES2017_18a$Race, cum=TRUE)
+freq(NHANES2017_18a$Diabetes, cum=TRUE)
+```
+
+Now generate graphs that represent these descriptive statistics (Continuous)
+```{r}
+library(ggplot2)
+ggplot(NHANES2017_18a, aes(x=LDLCholesterol)) + geom_histogram(bins = 30, color = "white", fill = "lightpink") + labs(title = "LDL Cholesterol Frequency", x="LDL-C", y="count")
+ggplot(NHANES2017_18a, aes(x=DR1TTFAT)) + geom_histogram(bins = 30, color = "white", fill = "lightpink") + labs(title = "Daily Fat Intake Frequency", x="Daily fat intake in grams", y="count")
+
+```
+
+
+Created a new database to filter Moderate activity and change the range
+now called NHANES_Moderate_reduced
+```{r}
+NHANEs_Moderate_reduced <- NHANES2017_18a%>%
+  filter(Moderate<541)
+  ggplot(NHANEs_Moderate_reduced, aes(x=Moderate)) + geom_histogram(bins = 30, color = "white", fill = "lightpink") + labs(title = "Daily Moderate Physcial Activity Frequency", x="Daily Moderate Physical activity in minutes", y="count")
+```
+
+Create a graph for descriptive stats of nominal and ordinal variables
+BMI categories
+```{r}
+BMIcat_table <- with(NHANES2017_18a, table(BMIcat))
+prop.table(BMIcat_table)
+BMIcat_barchart <- as.data.frame(prop.table(BMIcat_table)*100)
+BMIcat_barchart
+ggplot(BMIcat_barchart, aes(BMIcat,Freq)) +geom_col(fill="lightpink")
+```
+
+Age Categories
+```{r}
+Agecat_table <- with(NHANES2017_18a, table(Agecat))
+prop.table(Agecat_table)
+Agecat_barchart <- as.data.frame(prop.table(Agecat_table)*100)
+Agecat_barchart
+ggplot(Agecat_barchart, aes(Agecat,Freq)) +geom_col(fill="lightpink")
+```
+
+Gender
+```{r}
+Gender_table <- with(NHANES2017_18a, table(Gender))
+prop.table(Gender_table)
+Gender_barchart <- as.data.frame(prop.table(Gender_table)*100)
+Gender_barchart
+ggplot(Gender_barchart, aes(Gender,Freq)) +geom_col(fill="lightpink")
+```
+
+Race
+```{r}
+Race_table <- with(NHANES2017_18a, table(Race))
+prop.table(Race_table)
+Race_barchart <- as.data.frame(prop.table(Race_table)*100)
+Race_barchart
+ggplot(Race_barchart, aes(Race,Freq)) +geom_col(fill="lightpink")
+```
+
+Diabetes
+```{r}
+Diabetes_table <- with(NHANES2017_18a, table(Diabetes))
+prop.table(Diabetes_table)
+Diabetes_barchart <- as.data.frame(prop.table(Diabetes_table)*100)
+Diabetes_barchart
+ggplot(Diabetes_barchart, aes(Diabetes,Freq)) +geom_col(fill="lightpink")
+```
+
+Run a T-test
+Comparing Cholesterol levels across gender
+```{r}
+t.test(LDLCholesterol~Gender, var.equal=TRUE, data=NHANES2017_18a)
+```
+Null Hypothesis: There is no difference between LDL cholesterol for males and females.
+Alternative Hypothesis: There is a difference between males and females LDL cholestereol levels.
+This t-test shows that the difference between LDL Cholesterol levels for males and females is not statistically significant.
+
+Chi-Square test
+```{r}
+unique(sort(NHANES2017_18a$LDLCholesterolcat))
+LDLC_Race_table <- xtabs(~LDLCholesterolcat + Race, data=NHANES2017_18a)
+print(LDLC_Race_table)
+prop.table(LDLC_Race_table)*100
+chisq.test(LDLC_Race_table)
+```
+x-squared= 4.85 
+df=5 
+p-value= 0.44 not significant
+There are not any statistically significant differences in this comparison.
+
+
+Kruskal-Wallis Test with Dunn test
+Comparing Age cat and LDL cholestereol leve;s
+```{r}
+library(dunn.test)
+NHANES2017_18a%>%
+  drop_na(LDLCholesterol)%>%
+  group_by(Agecat)%>%
+  summarize(mean(LDLCholesterol), sd(LDLCholesterol), count=n())
+#2. Run the Kruskal-Wallis and Dunn tests:
+dunn.test(x=NHANES2017_18a$LDLCholesterol, g=NHANES2017_18a$Agecat, kw=TRUE)
+```
+Alternative Hypothesis: There is a difference between Age categories when comparing across LDL-C levels
+Null Hypothesis: There is no difference when comparing Age categories across LDL-D levels
+The Kruskal-Wallis test shows us that there is a statistically significant difference across age categories when comparing LDL-C levels because the p-value is 0.
+Every single comparison is statistically significant, except for 50-79 year-olds in comparison with 20-39 year-olds.
+
+
+
+Correlation and Scatterplot
+Comparing Total fat intake to LDL-C
+```{r}
+library(dplyr)
+library(ggplot2)
+
+#scatter plot code: #ggplot(aes(x=DepVar, y=IndVar), data=) + geom_point(color="") + geom_smooth(method=lm, color="") + labs(x="", y="") + theme_bw()
+ggplot(aes(x=LDLCholesterol, y=DR1TTFAT), data=NHANES2017_18a) + geom_point(color="lightpink") + geom_smooth(method=lm, color="blue") + labs(x="LDL Cholesterol Levels", y="Daily Fat Intake in grams") + theme_bw()
+#correlation test code: cor.test(data$DepVar, data$IndVar, method="pearson")
+cor.test(NHANES2017_18a$LDLCholesterol, NHANES2017_18a$DR1TTFAT, method = "pearson")
+```
+Alternative hypothesis: There is positive correlation between daily fat intake and LDL-C levels
+Null hypothesis: There is no correlation between daily fat intake and LDL-C levels.
+Correlation coefficient= -0.038
+p-value= 0.05335
+The p-value tells us that this is not statistically significant.
+There is a slightly negative correlation between daily fat intake and LDL-C levels.
+
+Linear Regression
+LDL-C by moderate
+```{r}
+#model_name <- lm(DepVar~IndVar, data=)
+#summary(model_name)
+Moderate_LDLC_Fit <- lm(LDLCholesterol~Moderate, data=NHANES2017_18a)
+summary(Moderate_LDLC_Fit)
+```
+What is the regression equation for this model?
+y= 109.58 + (-0.009)x
+What is the multiple R-squared value for this equation?
+0.0002
+What is the p-value?
+0.66
+What do these results indicate about the relationship between LDL-C and Moderate Daily Exercise?
+The multiple R-squared value tells us that there is likely no correlation between LDL-C levels and Moderate Daily Exercise. This is also not significant because the p-value is 0.66.
+
+
+Odds Ratio
+```{r}
+library(epitools)
+library(ggmosaic)
+#1. Create the odds table:
+#odds_table_name <- table(data$IndVar, data$DepVar)
+LDLC_Race_Odds_Table <- table(NHANES2017_18a$Race, NHANES2017_18a$LDLCholesterolcat)
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_Race_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(Race), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by Race", x="Race", y="LDL-C levels")
+```
+
+Questions: Compared to Mexican Americans, what are the odds ratios having optimal LDL-C levels for each racial category?
+Compared to Mexican Americans, multi-race individuals are 0.65 times more likely to have optimal LDL-C. Compared to Mexican Americans, non-Hispanic Asian individuals are 0.77 times more likely to have optimal LDL-C. Compared to Mexican Americans, non-Hispanic Black individuals are 1.03 times more likely to have optimal LDL-C. Compared to Mexican Americans, non-Hispanic white individuals are 0.95 times more likely to have optimal LDL-C. Compared to Mexican Americans, individuals who identify as other are 0.73 times more likely to have optimal LDL-C.
+Are these odds ratios significant?
+Multi-race p-value= 0.18 not significant
+non-Hispanic Asian p-value= 0.28 not significant
+non-Hispanic Black p-value= 0.90 not significant
+non-Hispanic white p-value= 0.81 not significant
+Other p-value= 0.29 not significant
+
+
+```{r}
+LDLC_Gender_Odds_Table <- table(NHANES2017_18a$Gender, NHANES2017_18a$LDLCholesterolcat)
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_Gender_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(Gender), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by Gender", x="Gender", y="LDL-C levels")
+```
+
+Questions: Compared to Males, what are the odds ratios having optimal LDL-C levels for each gender category?
+Compared to males, females are 0.98 times more likely to have optimal LDL-C.
+Are these odds ratios significant?
+Female p-value= 0.93 not significant
+
+```{r}
+LDLC_Diabetes_Odds_Table <- table(NHANES2017_18a$Diabetes, NHANES2017_18a$LDLCholesterolcat)
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_Diabetes_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(Diabetes), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by Diabetes", x="Diabetes", y="LDL-C levels")
+```
+
+Questions: Compared to people who have been told they have borderline diabetes, what are the odds ratios having optimal LDL-C levels for each diabetes category?
+Compared to borderline, individuals who have never been told they have diabetes are 1.49 times more likely to have optimal LDL-C.
+Compared to borderline, individuals who have been told they have diabetes are 3.79 times more likely to have optimal LDL-C.
+Are these odds ratios significant?
+No p-value= 0.26 not significant
+Yes p-value= 0.0005 significant
+
+Odds Ratio for Moderate categories with LDL-C
+```{r}
+LDLC_Moderate_Odds_Table <- table(NHANES2017_18a$Moderatecat, NHANES2017_18a$LDLCholesterolcat)
+LDLC_Moderate_Odds_Table
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_Moderate_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(Moderatecat), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by Moderate Daily Exercise", x="Moderate Daily Exercise", y="LDL-C levels")
+```
+
+Questions: Compared to people who do moderate exercise for less than 30 minutes a day, what are the odds ratios having optimal LDL-C levels for each moderate exercise category?
+Compared to <30, individuals who do moderate exercise 120-239 minutes daily are 1.20 times more likely to have optimal LDL-C.
+Compared to <30, individuals who do moderate exercise 240+ minutes daily are 1.04 times more likely to have optimal LDL-C.
+Compared to <30, individuals who do moderate exercise 30-59 minutes daily are 1.05 times more likely to have optimal LDL-C.
+Compared to <30, individuals who do moderate exercise 60-119 minutes daily are 0.99 times more likely to have optimal LDL-C.
+Are these odds ratios significant?
+120-239 p-value= 0.43 not significant
+240+ p-value= 0.93 not significant
+30-59 p-value= 0.78 not significant
+60-119 p-value= 0.97 not significant
+
+Odds Ratio for BMI cat with LDL-C
+```{r}
+LDLC_BMIcat_Odds_Table <- table(NHANES2017_18a$BMIcat, NHANES2017_18a$LDLCholesterolcat)
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_BMIcat_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(BMIcat), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by BMI Category", x="BMI Category", y="LDL-C levels")
+```
+
+Questions: Compared to people who have a healthy BMI, what are the odds ratios having optimal LDL-C levels for each BMI category?
+Compared to healthy, obese individuals are 0.68 times more likely to have optimal LDL-C.
+Compared to healthy, overweight individuals are 0.54 times more likely to have optimal LDL-C.
+Compared to healthy, underweight individuals are 2.45 times more likely to have optimal LDL-C.
+
+Are these odds ratios significant?
+obese p-value= 0.02 significant
+overweight p-value= 0.0003 significant
+underweight p-value= 0.12 not significant
+
+
+Odds Ration for LDL-C across Age categories
+```{r}
+LDLC_Agecat_Odds_Table <- table(NHANES2017_18a$Agecat, NHANES2017_18a$LDLCholesterolcat)
+#2. Run the oddsratio on the table you created:
+#oddsratio(odds_table_name)
+oddsratio(LDLC_Agecat_Odds_Table)
+#3. Graph the results in a mosaic table:
+#ggplot(data=) + geom_mosaic(aes(x=product(IndVar), fill=DepVar), na.rm=TRUE, show.legend=FALSE) + labs(title="", x="", y="")
+ggplot(data=NHANES2017_18a) + geom_mosaic(aes(x=product(Agecat), fill=LDLCholesterolcat), na.rm=TRUE, show.legend=FALSE) + labs(title="LDL-C Levels by Age Category", x="Age Category", y="LDL-C levels")
+```
+
+Questions: Compared to people who are less than 20 years old , what are the odds ratios having optimal LDL-C levels for each age category?
+Compared to <20, individuals between 20-39 years old are 0.60 times more likely to have optimal LDL-C.
+Compared to <20, individuals between 40-59 years old are 0.27 times more likely to have optimal LDL-C.
+Compared to <20, individuals between 50-79 years old are 0.59 times more likely to have optimal LDL-C.
+Compared to <20, individuals 80+ years old are 1.03 times more likely to have optimal LDL-C.
+Are these odds ratios significant?
+20-39 p-value= 0.25 not significant
+40-59 p-value= 0.002 significant
+50-79 p-value= 0.22 not significant
+80+ p-value= 0.96 not significant
